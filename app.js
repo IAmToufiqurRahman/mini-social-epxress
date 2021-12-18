@@ -20,7 +20,7 @@ app.use(flash())
 
 // this function is going to run for every request
 app.use((req, res, next) => {
-  // make markdown function available from ejs template
+  // make markdown function available for ejs template
   res.locals.userMarkdown = content => sanitizeHTML(markdown(content), { allowedTags: ['p', 'br', 'ul', 'li', 'strong', 'bold', 'i', 'em', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6'], allowedAttributes: {} })
 
   // make all error and success flash messages available for all templates

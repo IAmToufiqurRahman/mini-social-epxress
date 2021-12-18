@@ -86,26 +86,31 @@ Post.prototype.actuallyUpdate = function () {
   })
 }
 
-Post.reusablePostQuery = function (uniqueOperations, visitorId) {
+// the third paramative is for search method
+Post.reusablePostQuery = function (uniqueOperations, visitorId, finalOperation = []) {
   return new Promise(async (resolve, reject) => {
-    let aggreOperations = uniqueOperations.concat([
-      { $lookup: { from: 'users', localField: 'author', foreignField: '_id', as: 'authorDocument' } },
-      {
-        $project: {
-          title: 1,
-          body: 1,
-          createdDate: 1,
-          authorId: '$author', // pull in the author id of the current post
-          author: { $arrayElemAt: ['$authorDocument', 0] }
+    let aggreOperations = uniqueOperations
+      .concat([
+        { $lookup: { from: 'users', localField: 'author', foreignField: '_id', as: 'authorDocument' } },
+        {
+          $project: {
+            title: 1,
+            body: 1,
+            createdDate: 1,
+            authorId: '$author', // pull in the author id of the current post
+            author: { $arrayElemAt: ['$authorDocument', 0] }
+          }
         }
-      }
-    ])
+      ])
+      .concat(finalOperation)
 
     let posts = await postsCollection.aggregate(aggreOperations).toArray()
 
     // clean up author property to get rid of unnecessary properties from post object
     posts = posts.map(post => {
       post.isVisitorOwner = post.authorId.equals(visitorId)
+      // no need of authorId after confirming is visitor of the post actually owns that post, this check has already done in the previous line
+      post.authorId = undefined
 
       post.author = {
         username: post.author.username,
@@ -155,6 +160,18 @@ Post.delete = function (postIdToDelete, currentUserId) {
         reject()
       }
     } catch {
+      reject()
+    }
+  })
+}
+
+// $sort needs to come after $project if the thing you're sorting by is text score
+Post.search = function (searchTerm) {
+  return new Promise(async (resolve, reject) => {
+    if (typeof searchTerm === 'string') {
+      let posts = await Post.reusablePostQuery([{ $match: { $text: { $search: searchTerm } } }], undefined, [{ $sort: { score: { $meta: 'textScore' } } }])
+      resolve(posts)
+    } else {
       reject()
     }
   })
