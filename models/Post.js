@@ -86,7 +86,7 @@ Post.prototype.actuallyUpdate = function () {
   })
 }
 
-// the third paramative is for search method
+// the third parameter is for search method
 Post.reusablePostQuery = function (uniqueOperations, visitorId, finalOperation = []) {
   return new Promise(async (resolve, reject) => {
     let aggreOperations = uniqueOperations
@@ -174,6 +174,14 @@ Post.search = function (searchTerm) {
     } else {
       reject()
     }
+  })
+}
+
+Post.countPostsByAuthor = function (id) {
+  return new Promise(async (resolve, reject) => {
+    let postCount = await postsCollection.countDocuments({ author: id })
+
+    resolve(postCount)
   })
 }
 

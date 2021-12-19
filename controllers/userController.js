@@ -1,5 +1,34 @@
 const User = require('../models/User')
 const Post = require('../models/Post')
+const Follow = require('../models/Follow')
+
+exports.sharedProfileData = async (req, res, next) => {
+  let isVisitorsProfile = false // this property is for determinig if the visitor is viewing his/her own profile
+
+  let isFollowing = false // this property is for determining if the current visitor is following the current profile
+
+  if (req.session.user) {
+    isVisitorsProfile = req.profileUser._id.equals(req.session.user._id) // mongodb ObjectID has a method named equals which returns true or false
+    isFollowing = await Follow.isVisitorFollowing(req.profileUser._id, req.visitorId)
+
+    req.isVisitorsProfile = isVisitorsProfile // => true or false
+    req.isFollowing = isFollowing
+
+    // retrieve post, follower, and following counts, in order to work these three functions need to know which profile user we're looking for
+    let postCountPromise = Post.countPostsByAuthor(req.profileUser._id)
+    let followerCountPromise = Follow.countFollowersById(req.profileUser._id)
+    let followingCountPromise = Follow.countFollowingById(req.profileUser._id)
+
+    let [postCount, followerCount, followingCount] = await Promise.all([postCountPromise, followerCountPromise, followingCountPromise])
+
+    // add values on the request objectL
+    req.postCount = postCount
+    req.followerCount = followerCount
+    req.followingCount = followingCount
+
+    next() // going to userController.profilePostsScreen
+  }
+}
 
 exports.login = (req, res) => {
   let user = new User(req.body)
@@ -92,10 +121,50 @@ exports.profilePostsScreen = (req, res) => {
     .then(posts => {
       // this function will resolve with an array of posts
       res.render('profile', {
+        currentPage: 'posts',
+        counts: { postCount: req.postCount, followerCount: req.followerCount, followingCount: req.followingCount },
         posts: posts,
         profileUsername: req.profileUser.username,
-        profileAvatar: req.profileUser.avatar
+        profileAvatar: req.profileUser.avatar,
+        isFollowing: req.isFollowing,
+        isVisitorsProfile: req.isVisitorsProfile
       })
     })
     .catch(() => res.render('404'))
+}
+
+exports.profileFollowersScreen = async (req, res) => {
+  try {
+    let followers = await Follow.getFollowerById(req.profileUser._id)
+
+    res.render('profile-followers', {
+      currentPage: 'followers',
+      counts: { postCount: req.postCount, followerCount: req.followerCount, followingCount: req.followingCount },
+      followers: followers,
+      profileUsername: req.profileUser.username,
+      profileAvatar: req.profileUser.avatar,
+      isFollowing: req.isFollowing,
+      isVisitorsProfile: req.isVisitorsProfile
+    })
+  } catch {
+    res.render('404')
+  }
+}
+
+exports.profileFollowingScreen = async (req, res) => {
+  try {
+    let following = await Follow.getFollowingById(req.profileUser._id)
+
+    res.render('profile-following', {
+      currentPage: 'following',
+      counts: { postCount: req.postCount, followerCount: req.followerCount, followingCount: req.followingCount },
+      following: following,
+      profileUsername: req.profileUser.username,
+      profileAvatar: req.profileUser.avatar,
+      isFollowing: req.isFollowing,
+      isVisitorsProfile: req.isVisitorsProfile
+    })
+  } catch {
+    res.render('404')
+  }
 }
