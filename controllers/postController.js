@@ -23,7 +23,7 @@ exports.createPost = (req, res) => {
 exports.viewSinglePost = async (req, res) => {
   try {
     let post = await Post.findSinglePostById(req.params.id, req.visitorId)
-    res.render('single-post-screen', { post: post })
+    res.render('single-post-screen', { post: post, title: post.title })
   } catch (e) {
     res.render('404')
   }

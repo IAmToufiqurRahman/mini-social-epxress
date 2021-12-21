@@ -124,6 +124,7 @@ exports.profilePostsScreen = (req, res) => {
     .then(posts => {
       // this function will resolve with an array of posts
       res.render('profile', {
+        title: req.profileUser.username,
         currentPage: 'posts',
         counts: { postCount: req.postCount, followerCount: req.followerCount, followingCount: req.followingCount },
         posts: posts,
