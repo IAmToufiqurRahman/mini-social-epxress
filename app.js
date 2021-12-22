@@ -4,6 +4,7 @@ const MongoStore = require('connect-mongo')(session)
 const flash = require('connect-flash')
 const markdown = require('marked')
 const sanitizeHTML = require('sanitize-html')
+const csrf = require('csurf')
 
 const app = express()
 
@@ -47,8 +48,28 @@ app.set('views', 'views') // express is going to look for the folder defined as 
 
 app.set('view engine', 'ejs')
 
+// now any of our post put delete or any request that modify the state will need to have a valid, matching csrf token
+app.use(csrf())
+
+// to make the csrf token available from html templates
+app.use((req, res, next) => {
+  res.locals.csrfToken = req.csrfToken()
+  next()
+})
+
 // app.get('/', (req, res) => res.render('home-guest'))
 app.use('/', router)
+
+app.use((err, req, res, next) => {
+  if (err) {
+    if (err.code == 'EBADCSRFTOKEN') {
+      req.flash('errors', 'Cross site request detected.')
+      req.session.save(() => res.redirect('/'))
+    } else {
+      res.render('404')
+    }
+  }
+})
 
 // we created a server that is going to use our express app as its handler,
 const server = require('http').createServer(app)
