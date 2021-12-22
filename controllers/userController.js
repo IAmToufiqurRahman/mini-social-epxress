@@ -2,6 +2,22 @@ const User = require('../models/User')
 const Post = require('../models/Post')
 const Follow = require('../models/Follow')
 
+// function for client side validation, respond with either true/ false
+exports.doesUsernameExist = (req, res) => {
+  User.findByUsername(req.body.username)
+    .then(() => {
+      res.json(true)
+    })
+    .catch(() => {
+      res.json(false)
+    })
+}
+
+exports.doesEmailExist = async (req, res) => {
+  let emailBool = await User.doesEmailExist(req.body.email)
+  res.json(emailBool)
+}
+
 exports.sharedProfileData = async (req, res, next) => {
   let isVisitorsProfile = false // this property is for determinig if the visitor is viewing his/her own profile
 
