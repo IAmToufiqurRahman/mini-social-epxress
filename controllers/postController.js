@@ -19,6 +19,19 @@ exports.createPost = (req, res) => {
     })
 }
 
+exports.apiCreate = (req, res) => {
+  let post = new Post(req.body, req.apiUser._id)
+
+  post
+    .create()
+    .then(newId => {
+      res.json('Congrats')
+    })
+    .catch(errors => {
+      res.json(errors)
+    })
+}
+
 // before rendering the post template we need to look up into the database and it's going to be an asynchronous operation
 exports.viewSinglePost = async (req, res) => {
   try {
@@ -94,6 +107,16 @@ exports.delete = (req, res) => {
       req.flash('errors', 'You do not have permission to perform that action')
 
       req.session.save(() => res.redirect('/'))
+    })
+}
+
+exports.apiDelete = (req, res) => {
+  Post.delete(req.params.id, req.apiUser._id)
+    .then(() => {
+      res.json('Success')
+    })
+    .catch(() => {
+      res.json('You dont have permission to delete')
     })
 }
 

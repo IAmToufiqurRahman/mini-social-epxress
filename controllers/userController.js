@@ -1,6 +1,18 @@
 const User = require('../models/User')
 const Post = require('../models/Post')
 const Follow = require('../models/Follow')
+const jwt = require('jsonwebtoken')
+
+// api function
+exports.apiGetPostByUsername = async (req, res) => {
+  try {
+    let authorDoc = await User.findByUsername(req.params.username)
+    let posts = await Post.findByAuthorId(authorDoc._id)
+    res.json(posts)
+  } catch (error) {
+    res.json('Sorry, invalid user requested ')
+  }
+}
 
 // function for client side validation, respond with either true/ false
 exports.doesUsernameExist = (req, res) => {
@@ -72,6 +84,19 @@ exports.login = (req, res) => {
     })
 }
 
+exports.apiLogin = (req, res) => {
+  let user = new User(req.body)
+
+  user
+    .login()
+    .then(result => {
+      res.json(jwt.sign({ _id: user.data._id }, process.env.JWTSECRET, { expiresIn: '3d' }))
+    })
+    .catch(error => {
+      res.json('Sorry, your values are not correct ')
+    })
+}
+
 exports.logout = (req, res) => {
   // this destroy method is going to deal with our database, this is asynchronous event, so we should use promise or async/ await but this session package function do not return promises, so we're gonna use callback approach
   req.session.destroy(() => {
@@ -120,6 +145,18 @@ exports.isLoggedIn = (req, res, next) => {
     req.session.save(() => {
       res.redirect('/')
     })
+  }
+}
+
+// api endpoint
+exports.apiIsLoggedIn = (req, res, next) => {
+  try {
+    // if valid token detected, then save it to this property
+    req.apiUser = jwt.verify(req.body.token, process.env.JWTSECRET)
+    // next function fot this route would be able to access this api user
+    next()
+  } catch (error) {
+    res.json('Sorry, you must provide a valid token')
   }
 }
 
